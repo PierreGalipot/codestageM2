@@ -1,0 +1,82 @@
+//Model parameters
+real Du=0.010;
+real Dv=0.2;
+real a1=0.8;
+real a2=1;
+
+real xa = 2;
+real xb = -2;
+
+//Computational space and associated parameters
+real dt=0.05; 		//discrétisation temporelle
+int nx=75; 		//discrétisation spatiale
+int n=100000; 		//nb iterations
+int i=0;
+
+real t=0;
+
+//mesh Th=square(nx,nx,[-4+8*x,0+8*y]); 	//definition du domaine
+//border a(t=0,1){x=-8+16*t;y=0;label=1;};
+//border c(t=1,0){x=-4+8*t;y=16;label=1;};
+//border d(t=1,0){x=-8+4*t;y=16*t;label=1;};
+border d1(t=1,0){x=-6+2*t;y=12*t+4;label=1;};
+border d2(t=1,0){x=-16+10*t;y=4;label=1;};
+border d3(t=1,0){x=-16;y=-2+6*t;label=1;};
+border d4(t=1,0){x=-7-9*t;y=-2;label=1;};
+//border e(t=0,1){x=-8+2*t;y=-4*t;label=1;};
+border e1(t=0,1){x=-7+t;y=-2-2*t;label=1;};
+border f(t=0,1){x=-6+12*t;y=-4;label=1;};
+//border g(t=0,1){x=6+2*t;y=-4+4*t;label=1;};
+border g1(t=0,1){x=6+t;y=-4+2*t;label=1;};
+border g2(t=0,1){x=7+9*t;y=-2;label=1;};
+border g3(t=0,1){x=16;y=-2+6*t;label=1;};
+border g4(t=0,1){x=16-10*t;y=4;label=1;};
+//border b(t=0,1){x=8-4*t;y=16*t;label=1;};
+border b1(t=0,1){x=6-2*t;y=4+12*t;label=1;};
+border h(t=0,1){x=4;y=16+8*t;label=1;};
+//border i2(t=0,1){x=4-8*t;y=24;label=1;};
+border i3(t=0,1){x=4+2*t;y=24+4*t;label=1;};
+border i4(t=0,1){x=6-2*t;y=28+4*t;label=1;};
+border i5(t=0,1){x=4-8*t;y=32;label=1;};
+border i6(t=0,1){x=-4-2*t;y=32-4*t;label=1;};
+border i7(t=0,1){x=-6+2*t;y=28-4*t;label=1;};
+border j(t=0,1){x=-4;y=24-8*t;label=1;};
+
+mesh Th = buildmesh( d1(nx)+d2(nx/2)+d3(nx/2)+d4(nx)+e1(nx/4)+f(nx)+g1(nx/4)+g2(nx)+g3(nx/2)+g4(nx/2)+b1(nx)+h(nx/2)+i3(nx/2)+i4(nx/2)+i5(nx/2)+i6(nx/2)+i7(nx/2)+j(nx/2) );
+plot(Th, wait = 0);
+
+fespace Vh(Th, P1,periodic=[[2,x],[4,x],[8,x],[10,x]]);
+Vh U = randreal1(), tU;
+Vh pU = 1+2*exp(-20*x*x)*(y<30)+2*exp(-20*(x-xa+(y-16)/8)*(x+(y-16)/8-xa))*(y>-2)*(y<16)+2*exp(-20*(x+(-y+16)/8-xb)*(x+(-y+16)/8-xb))*(y>-2)*(y<16)+2*exp(-20*(x-xa+(y-16)/8+8.5)*(x+(y-16)/8-xa+8.5))*(y<-2)+2*exp(-20*(x+(-y+16)/8-xb-8.5)*(x+(-y+16)/8-xb-8.5))*(y<-2)+2*exp(-20*(x-xa)*(x-xa))*(y>16)*(y<30)+2*exp(-20*(x-xb)*(x-xb))*(y>16)*(y<30)+0.25*randreal1()-0.125; 		//Initial conditions of activator
+Vh V, tV;
+Vh pV = 1+2*exp(-20*x*x)*(y<30)+2*exp(-20*(x-xa+(y-16)/8)*(x+(y-16)/8-xa))*(y>-2)*(y<16)+2*exp(-20*(x+(-y+16)/8-xb)*(x+(-y+16)/8-xb))*(y>-2)*(y<16)+2*exp(-20*(x-xa+(y-16)/8+8.5)*(x+(y-16)/8-xa+8.5))*(y<-2)+2*exp(-20*(x+(-y+16)/8-xb-8.5)*(x+(-y+16)/8-xb-8.5))*(y<-2)+2*exp(-20*(x-xa)*(x-xa))*(y>16)*(y<30)+2*exp(-20*(x-xb)*(x-xb))*(y>16)*(y<30)+0.25*randreal1()-0.125; 		//Initial conditions of inhibitor
+//Vh pu = 1+2*exp(-200*x*x)+2*exp(-200*(x-xa)*(x-xa))+2*exp(-200*(x-xb)*(x-xb));
+
+
+//Weak formulation of the problem
+problem Turing( [U,V] , [tU,tV] )= 
+	int2d(Th)( U*tU ) - int2d(Th)( pU*tU ) 			//derivee temporelle
+	+ int2d(Th)( dt*Du*(dx(U)*dx(tU)+dy(U)*dy(tU))  ) 	//diffusion 
+	- int2d(Th)( dt*(pU*pU*tU)/(pV*pV) ) 			//reaction 
+	+ int2d(Th)( dt*a1*U*tU )
+
+
+	+ int2d(Th)( V*tV ) - int2d(Th)( pV*tV )
+	+ int2d(Th)( dt*( Dv*(dx(V)*dx(tV)+dy(V)*dy(tV))  ) )
+	- int2d(Th)( dt*(pU*pU*tV) )
+	+ int2d(Th)( dt*a2*V*tV )
+
+
+;
+
+
+//Computational loop
+while (i < n) {
+i++;
+t=t+dt;
+Turing;
+pU=U;
+pV=V;
+string legend = " Umin = " + U[].min+" Umax = "+U[].max+ " and t = " + t;
+plot(U,fill=1, cmm = legend , grey=1, wait = 0);
+}
